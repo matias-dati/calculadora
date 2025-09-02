@@ -1,0 +1,79 @@
+import streamlit as st
+import pandas as pd # Exemplo de import que você já deve ter
+# ... outros imports ...
+
+# --- CSS Personalizado para Layout e Estilo ---
+st.markdown("""
+<style>
+    /* Estilo para centralizar o título e a logo */
+    .block-container {
+        padding-top: 2rem; # Ajuste do padding superior
+        padding-bottom: 0rem; # Ajuste do padding inferior
+        padding-left: 1rem; # Ajuste do padding esquerdo
+        padding-right: 1rem; # Ajuste do padding direito
+    }
+    .st-emotion-cache-1jm98c7 { /* Seletor para o título, pode variar */
+        text-align: center;
+        color: #2C005A; /* Cor do texto "dati+" */
+        font-family: 'Arial', sans-serif;
+    }
+    /* Centraliza a imagem da logo */
+    .st-emotion-cache-nahz7x { /* Seletor para o container de imagem */
+        display: flex;
+        justify-content: center;
+        margin-bottom: 20px; /* Espaço abaixo da logo */
+    }
+    /* Estilo para o background da sidebar */
+    .st-emotion-cache-1c19ghu {
+        background-color: #F0F8FF; /* Azul clarinho para sidebar */
+        color: #2C005A; /* Texto na sidebar */
+    }
+    /* Botões com bordas arredondadas e sombra suave */
+    .st-emotion-cache-vk3377 { /* Seletor de botão */
+        border-radius: 8px; /* Cantos arredondados */
+        box-shadow: 2px 2px 5px rgba(0,0,0,0.1); /* Sombra suave */
+    }
+    /* Estilo para o file uploader */
+    .st-emotion-cache-b9f4a8 p {
+        font-size: 1.1em;
+        font-weight: bold;
+        color: #2C005A;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# --- Adicionando a Logo ---
+# Você precisará hospedar a logo em algum lugar que o Streamlit Community Cloud possa acessar,
+# como no seu próprio repositório GitHub ou um serviço de hospedagem de imagens.
+# Supondo que você colocou a Image 2 (com o texto "dati+") no seu repositório como 'logo_dati.png'
+# no mesmo nível do app.py, ou em uma pasta 'assets/logo_dati.png'.
+# Se estiver no GitHub, o link direto para a raw content seria:
+# raw_logo_url = "https://raw.githubusercontent.com/SEU_USUARIO/SEU_REPOSITORIO/main/logo_dati.png"
+# Ou, se for uma imagem local no seu repositório:
+st.image("logo_dati.png", width=200) # Ajuste o path e o width conforme necessário
+
+st.title("Resumo Financeiro da AWS")
+
+# --- Seu código Streamlit existente continua aqui ---
+# Exemplo de como seu file uploader e outras partes ficariam:
+uploaded_file = st.file_uploader("Envie seu arquivo CSV de calculadora AWS aqui", type=["csv"])
+
+if uploaded_file is not None:
+    df = pd.read_csv(uploaded_file)
+    st.success("Arquivo carregado com sucesso!")
+
+    # Exemplo de como exibir o resumo
+    st.subheader("Visão Geral do Resumo")
+    st.write(df.head()) # Apenas para exemplo, substitua pelo seu resumo real
+
+    # Você pode usar st.container() para agrupar conteúdo
+    with st.container(border=True):
+        st.write("Aqui viriam os gráficos ou tabelas de resumo financeiro.")
+        # Seu código para gerar o resumo vai aqui
+        st.metric(label="Custo Total Estimado", value="R$ 1.234,56", delta="R$ 50,00 (Semana Passada)")
+
+    # Exemplo de sidebar (se você tiver)
+    with st.sidebar:
+        st.header("Opções")
+        selected_option = st.radio("Escolha o período:", ("Mensal", "Semanal", "Anual"))
+        st.button("Gerar Relatório Detalhado")
