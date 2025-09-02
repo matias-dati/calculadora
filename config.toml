@@ -1,0 +1,71 @@
+import streamlit as st
+import pandas as pd
+
+# --- CSS fixo e genérico ---
+st.markdown("""
+<style>
+    /* Container principal */
+    .block-container {
+        padding-top: 2rem;
+        padding-bottom: 0rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+
+    /* Centralizar títulos */
+    h1, h2, h3 {
+        text-align: center;
+        color: #2C005A;
+        font-family: 'Arial', sans-serif;
+    }
+
+    /* Centralizar imagens */
+    img {
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    /* Sidebar */
+    section[data-testid="stSidebar"] {
+        background-color: #F0F8FF;
+        color: #2C005A;
+    }
+
+    /* Botões */
+    button[kind="primary"] {
+        border-radius: 8px;
+        box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+    }
+
+    /* File uploader */
+    [data-testid="stFileUploader"] p {
+        font-size: 1.1em;
+        font-weight: bold;
+        color: #2C005A;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# --- Logo e título ---
+st.image("01 - Dati Logotipo Oficial.png", width=200)
+st.title("Resumo Financeiro da AWS")
+
+# --- File uploader ---
+uploaded_file = st.file_uploader("Envie seu arquivo CSV de calculadora AWS aqui", type=["csv"])
+
+if uploaded_file is not None:
+    df = pd.read_csv(uploaded_file)
+    st.success("Arquivo carregado com sucesso!")
+
+    st.subheader("Visão Geral do Resumo")
+    st.write(df.head())
+
+    with st.container(border=True):
+        st.write("Aqui viriam os gráficos ou tabelas de resumo financeiro.")
+        st.metric(label="Custo Total Estimado", value="R$ 1.234,56", delta="R$ 50,00 (Semana Passada)")
+
+    with st.sidebar:
+        st.header("Opções")
+        selected_option = st.radio("Escolha o período:", ("Mensal", "Semanal", "Anual"))
+        st.button("Gerar Relatório Detalhado")
