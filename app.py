@@ -109,6 +109,19 @@ def extract_instance_details(config_text: str, service: str) -> Dict:
         
         details['specs'] = [purchase_option, period, cache_engine]
     
+    elif "AWS Fargate" in service or "Fargate" in service:
+        # Extrair arquitetura (ARM ou x86)
+        architecture = 'x86'  # padrão
+        if 'ARM' in config_text:
+            architecture = 'ARM'
+        
+        # Extrair sistema operacional
+        os_system = 'Linux'  # padrão
+        if 'Windows' in config_text:
+            os_system = 'Windows'
+        
+        details['specs'] = [architecture, os_system]
+    
     return details
 
 def load_csv_file(file_path_or_buffer) -> pd.DataFrame:
@@ -212,7 +225,9 @@ def process_csv(df: pd.DataFrame, lambda_payment_option: str = "No Upfront 12x p
         # Aplicar descontos específicos
         if "CloudFront" in service:
             payment_mode = 'No Upfront'
-            total_cost = monthly * 0.7  # 30% desconto
+            # Garantir que usa o valor mensal correto e aplica 30% de desconto
+            base_cost = monthly if monthly > 0 else upfront
+            total_cost = base_cost * 0.7  # 30% desconto
         elif "AWS Lambda" in service or "Lambda" in service:
             # Lambda sempre processa (mesmo On Demand)
             payment_mode = 'All Upfront' if 'All Upfront' in lambda_payment_option else 'No Upfront'
@@ -239,10 +254,8 @@ def process_csv(df: pd.DataFrame, lambda_payment_option: str = "No Upfront 12x p
             is_arm = 'ARM' in config
             is_sao_paulo = 'São Paulo' in region or 'América do Sul' in region
             
-            if payment_mode == 'All Upfront':
-                base_cost = upfront if upfront > 0 else monthly
-            else:
-                base_cost = monthly
+            # Sempre usar o valor mensal como base para Fargate
+            base_cost = monthly
             
             if is_sao_paulo:
                 if payment_mode == 'All Upfront':
@@ -257,7 +270,10 @@ def process_csv(df: pd.DataFrame, lambda_payment_option: str = "No Upfront 12x p
                         total_cost = base_cost * 0.85  # 15% desconto
             else:
                 if payment_mode == 'All Upfront':
-                    total_cost = base_cost * 0.73  # 27% desconto
+                    if is_arm:
+                        total_cost = base_cost * 0.73  # 27% desconto
+                    else:
+                        total_cost = base_cost * 0.73  # 27% desconto
                 else:
                     if is_arm:
                         total_cost = base_cost * 0.79  # 21% desconto
@@ -270,14 +286,16 @@ def process_csv(df: pd.DataFrame, lambda_payment_option: str = "No Upfront 12x p
             else:
                 total_cost = monthly
         
-        # Correção especial: se upfront = 0 e monthly > 0, forçar No Upfront
-        if upfront == 0 and monthly > 0:
+        # Correção especial: se upfront = 0 e monthly > 0, forçar No Upfront (exceto CloudFront, Lambda e Fargate que já têm desconto aplicado)
+        if upfront == 0 and monthly > 0 and "CloudFront" not in service and "Lambda" not in service and "AWS Fargate" not in service and "Fargate" not in service:
             payment_mode = 'No Upfront'
             total_cost = monthly
         
-        # Pular linhas On Demand (exceto Lambda, Fargate e linhas reservadas)
+        # Pular linhas On Demand (exceto Lambda, Fargate, CloudFront e linhas reservadas)
         if ('On Demand' in hierarchy or 'On-Demand' in hierarchy) and 'AWS Lambda' not in service and 'Lambda' not in service and 'AWS Fargate' not in service and 'Fargate' not in service and 'CloudFront' not in service and 'All Upfront' not in hierarchy and 'All UpFront' not in hierarchy and 'No Upfront' not in hierarchy and 'No UpFront' not in hierarchy:
-            continue
+            # Permitir Fargate mesmo em On Demand
+            if 'AWS Fargate' not in service and 'Fargate' not in service:
+                continue
         
         details = extract_instance_details(config, service)
         
@@ -426,6 +444,13 @@ def generate_summary(data: Dict, exchange_rate: float, tax_rate: float = 13.83, 
                 summary += f"ECS fargate - {region_name} - Conta AWS {account_id}\n"
                 summary += "Período: 1 ano\n"
                 summary += f"Forma de pagamento: {fargate_payment_option}\n"
+                
+                # Mostrar detalhes das configurações
+                for instance in instances:
+                    architecture = instance['specs'][0] if len(instance['specs']) > 0 else 'x86'
+                    os_system = instance['specs'][1] if len(instance['specs']) > 1 else 'Linux'
+                    summary += f"Configuração: {os_system} {architecture}\n"
+                
                 if no_upfront_cost > 0:
                     summary += f"Valor total No Upfront: USD {no_upfront_cost:,.2f}/mês\n"
                 if all_upfront_cost > 0:
